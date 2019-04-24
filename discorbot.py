@@ -79,6 +79,8 @@ tone_analyzer = ToneAnalyzerV3(
 	url=watson_url
 	)
 
+apx_url = "https://apextab.com/api/search.php?platform=pc&search="
+apx_url_tot = "https://apextab.com/api/player.php?aid="
 
 pubgKey = pubg_key()
 #pubgUrl = "https://api.playbattlegrounds.com/shards/" + region + "/players?filter[playerNames]=" + handle
@@ -851,7 +853,7 @@ async def maintainPoll(Qs, opts, building=False):
 	global ServerChan
 	global currentPoll		
 	displayMsg = "Preparing Poll"
-	if  not building:
+	if building:
 		message = await my_bot.get_channel(ServerChan).send(displayMsg)
 	else:
 		message = None
@@ -883,7 +885,7 @@ async def maintainPoll(Qs, opts, building=False):
 	if not building:
 		pie = await pieIt(labels,sizes,6)
 		displayMsg = displayMsg + "\n" + pie
-	if not building:
+	if building:
 		await message.edit(content=displayMsg)
 	Polls.writeOut()
 	
@@ -1332,7 +1334,7 @@ async def assist(ctx,*args):
 						prevChar = keyword[0]
 					if prevChar != keyword[0]:
 						mensaje = mensaje + '\n'
-					mensaje = mensaje + "| " + keyword + " |"
+					mensaje = mensaje + ": " + keyword + " :"
 					prevChar = keyword[0]
 				await user.send(mensaje)
 				break
@@ -1344,7 +1346,7 @@ async def assist(ctx,*args):
 						prevChar = keyword[0]
 					if prevChar != keyword[0]:
 						mensaje = mensaje + '\n'
-					mensaje = mensaje + "| " + keyword + " |"
+					mensaje = mensaje + ": " + keyword + " :"
 				await user.send(mensaje)
 				break
 			await user.send('command cannot take extra args')
@@ -2569,9 +2571,21 @@ async def downloadTheme(argu,id):
 def makeSchlorp(name):
 	scNum = random.randint(1, 2)
 	greet = random.randint(1, 3)
-	createTTS(name)
-	eventQueue.put("schlorp" + str(greet) + str(scNum))
+	name = name.replace("'",'')
+	createTTS(name, 'schlorp')
+	eventQueue.put("schlorp" + str(greet) + str(scNum) + str(name.replace(' ','')))
 
+@my_bot.command(brief="be mean")
+async def hate(ctx, *args):
+	if ctx.message.mentions is not []:
+		for member in ctx.message.mentions:
+			print(member.display_name)
+			await makeHate(member.display_name)
+
+async def makeHate(name):
+	name = name.replace("'",'')
+	createTTS(name, 'hate')
+	eventQueue.put("hate" + name.replace(' ',''))
 
 
 """
@@ -2605,6 +2619,22 @@ def loadSummonerFile():
 	for match in membersummoners:
 		summoner, member, region = match.split(':')
 		RiotDict[summoner] = (member, region)
+
+
+@my_bot.command()
+async def apex(ctx,arg):
+	await ctx.message.delete()
+	global ServerChan
+	player = arg
+	print(apx_url + player)
+	data = requests.get(apx_url + player)
+	data = json.loads(data.content.decode('utf-8'))
+	print(data)
+	aid = data['results'][0]['aid']
+	stats = requests.get(apx_url_tot + aid)
+	stats = json.loads(stats.content.decode('utf-8'))
+	print(stats)
+
 
 
 @my_bot.command()
@@ -2752,9 +2782,9 @@ async def ttsIt():
 	tts.save("TTS.mp3")
 	await playfile("TTS.mp3",playbackVol, False, True)
 
-def createTTS(text):
+def createTTS(text, dir):
 	tts = gTTS(text=text, lang='en-uk')
-	tts.save("schlorp/greet.mp3")
+	tts.save(dir + "/" + text.replace(' ','') + ".mp3")
 	
 
 """
@@ -3922,20 +3952,26 @@ async def announce_process(q):
 				if str(event[:7]) == 'schlorp':
 					if event[7]  == '1':
 						start = 'schlorp/schlorp_' + event[8] + '.mp3'
-						middle = 'schlorp/greet.mp3'
+						middle = 'schlorp/' + event[9:] + '.mp3'
 						end = 'schlorp/indi_' + event[7] + '.mp3'
-						cmd = 'ffmpeg -y -i "concat:' + start + '|' + middle + '|' + end + '" -c copy result.mp3'
+						cmd = 'ffmpeg -y -i "concat:' + start + '|' + middle + '|' + end + '" -c copy result' + event[9:] + '.mp3'
 						os.system(cmd)
-						await swippity("result.mp3",playbackVol, False)
+						await swippity("result" + event[9:] + ".mp3",playbackVol, False)
 						print("Swippitied")
 					else:
 						start = 'schlorp/schlorp_' + event[8] + '.mp3'
-						end = 'schlorp/greet.mp3'
+						end = 'schlorp/' + event[9:] + '.mp3'
 						middle = 'schlorp/indi_' + event[7] + '.mp3'
-						cmd = 'ffmpeg -y -i "concat:' + start + '|' + middle + '|' + end + '" -c copy result.mp3'
+						cmd = 'ffmpeg -y -i "concat:' + start + '|' + middle + '|' + end + '" -c copy result' + event[9:] + '.mp3'
 						os.system(cmd)
-						await swippity("result.mp3",playbackVol, False)
+						await swippity("result" + event[9:] + ".mp3",playbackVol, False)
 						print("Swooppitied")
+				if str(event[:4]) == 'hate':
+					start = 'hate/hate.mp3'
+					end = 'hate/' + event[4:] + '.mp3'
+					cmd = 'ffmpeg -y -i "concat:' + start + '|' + end + '" -c copy hate/result' + event[4:] + '.mp3'
+					os.system(cmd)
+					await swippity('hate/result' + event[4:] + '.mp3', playbackVol, False)
 				if str(event[:6]) == 'sounds':
 					if(soundDict[event[6:]] is not 1):
 						index = random.randint(1,soundDict[argu])
