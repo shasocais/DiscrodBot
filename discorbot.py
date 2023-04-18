@@ -42,7 +42,6 @@ import time
 import html5lib
 import aiohttp
 import os
-from pypubg import core
 #import steamapi
 
 from keys import *
@@ -66,68 +65,70 @@ import cv2
 
 import ast
 
-from watson_developer_cloud import ToneAnalyzerV3
+# from watson_developer_cloud import ToneAnalyzerV3
 
 import text_to_image
 
 
-watson_url = "https://gateway-syd.watsonplatform.net/tone-analyzer/api"
+# watson_url = "https://gateway-syd.watsonplatform.net/tone-analyzer/api"
 
-tone_analyzer = ToneAnalyzerV3(
-	version = "2017-09-21",
-	iam_apikey=tone_key(),
-	url=watson_url
-	)
+# tone_analyzer = ToneAnalyzerV3(
+# 	version = "2017-09-21",
+# 	iam_apikey=tone_key(),
+# 	url=watson_url
+# 	)
 
-apx_url = "https://apextab.com/api/search.php?platform=pc&search="
-apx_url_tot = "https://apextab.com/api/player.php?aid="
+# apx_url = "https://apextab.com/api/search.php?platform=pc&search="
+# apx_url_tot = "https://apextab.com/api/playerplayer.php?aid="
 
-pubgKey = pubg_key()
-#pubgUrl = "https://api.playbattlegrounds.com/shards/" + region + "/players?filter[playerNames]=" + handle
-fortniteKey = fortnite_key()
-riotToken = riot_key()
-#leagueMainUrl = league','https://' + req.session.user.summID.region + '.api.riotgames.com/lol/league/v3/positions/by-summoner/' + req.session.user.summID.id'
-#leagueIDUrl = "https://" + region + ".api.riotgames.com/lol/summoner/v3/summoners/by-name/" + handle
-riotHeader = {'X-Riot-Token' : riotToken}
-#302e9b76-623f-4be8-ad5a-6b3ac3446006
-#steamapi.core.APIConnection(api_key=steam_key(),validate_key=True)
-api = core.PUBGAPI(pubg_core())
+# pubgKey = pubg_key()
+# #pubgUrl = "https://api.playbattlegrounds.com/shards/" + region + "/players?filter[playerNames]=" + handle
+# fortniteKey = fortnite_key()
+# riotToken = riot_key()
+# #leagueMainUrl = league','https://' + req.session.user.summID.region + '.api.riotgames.com/lol/league/v3/positions/by-summoner/' + req.session.user.summID.id'
+# #leagueIDUrl = "https://" + region + ".api.riotgames.com/lol/summoner/v3/summoners/by-name/" + handle
+# riotHeader = {'X-Riot-Token' : riotToken}
+# #302e9b76-623f-4be8-ad5a-6b3ac3446006
+# #steamapi.core.APIConnection(api_key=steam_key(),validate_key=True)
+# api = core.PUBGAPI(pubg_core())
 html_parser = HTMLParser()
 display = Display(visible=0,size=(800,600))
 display.start()
 
 
 async def getTone():
-	global ServerChan
-	text = ''
-	async for message in my_bot.get_channel(ServerChan).history(limit=100):
-		#print(message.content)
-		if message.content is not None:
-			text = text + message.content + '\n'
-	tone_analysis = tone_analyzer.tone(
-    {'text': text},
-    'application/json'
-	).get_result()
-	jsan = tone_analysis
-	doc = jsan["document_tone"]["tones"]
-	sent = jsan["sentences_tone"]
-	#print(doc)
-	outMsg = "The chat's recent tone: \n"
-	for tone in doc:
-		outMsg = outMsg + tone["tone_name"] + " : " + str(tone["score"]) + "\n"
-	await my_bot.get_channel(ServerChan).send(outMsg)
+	pass
+	# global ServerChan
+	# text = ''
+	# async for message in my_bot.get_channel(ServerChan).history(limit=100):
+	# 	#print(message.content)
+	# 	if message.content is not None:
+	# 		text = text + message.content + '\n'
+	# tone_analysis = tone_analyzer.tone(
+ #    {'text': text},
+ #    'application/json'
+	# ).get_result()
+	# jsan = tone_analysis
+	# doc = jsan["document_tone"]["tones"]
+	# sent = jsan["sentences_tone"]
+	# #print(doc)
+	# outMsg = "The chat's recent tone: \n"
+	# for tone in doc:
+	# 	outMsg = outMsg + tone["tone_name"] + " : " + str(tone["score"]) + "\n"
+	# await my_bot.get_channel(ServerChan).send(outMsg)
 	#print(sent)
 	#print(tone_analysis)
 
 	#print(json.dumps(tone_analysis, indent=2))
 	
 def getSummonerID(region,handle):
-	global riotHeader
-	leagueExUrlID = "https://" + str(region) + ".api.riotgames.com/lol/summoner/v3/summoners/by-name/" + str(handle)
-	response = requests.get(leagueExUrlID,headers=riotHeader)
-	data = json.loads(response.content.decode('utf-8'))
-	print(data)
-	return data
+	pass
+	# global riotHeader
+	# leagueExUrlID = "https://" + str(region) + ".api.riotgames.com/lol/summoner/v3/summoners/by-name/" + str(handle)
+	# response = requests.get(leagueExUrlID,headers=riotHeader)
+	# data = json.loads(response.content.decode('utf-8'))
+	# print(data)
+	# return data
 #chromedriver = "/usr/local/bin/chromedriver"
 #os.environ["webdriver.chrome.driver"] = chromedriver
 #browser = webdriver.Firefox()
@@ -4346,10 +4347,10 @@ readBirthdays()
 read_mango()
 #(Shasocais:274),
 
-my_bot.run(bot_key(),bot=True,reconnect=True)
+my_bot.run(bot_key(),reconnect=True)
 if(my_bot.is_closed()):
 	print("DEAD BOT")
-	my_bot.run(bot_key(),bot=True,reconnect=True)
+	my_bot.run(bot_key(),reconnect=True)
 
 
 
