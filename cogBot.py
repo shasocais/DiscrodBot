@@ -25,10 +25,6 @@ cogs_dir = "cogs"
 intents = nextcord.Intents.all()
 bot = commands.Bot(command_prefix=get_prefix, description='A modular bot', intents=intents)
 
-@bot.command(name='sync')
-async def synchro(ctx, *args):
-	await ctx.send(global_handlers.PLAYERQUEUE.qsize())
-
 # Here we load our extensions(cogs) that are located in the cogs directory. Any file in here attempts to load.
 
 def load_extensions():

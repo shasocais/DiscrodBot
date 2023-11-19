@@ -1,4 +1,5 @@
 import ast
+import glob
 import os
 import asyncio
 from subprocess import call
@@ -13,6 +14,7 @@ import helper_classes
 
 class FileCog(commands.Cog):
 	def __init__(self, bot):
+		self.translation_table = global_handlers.TRANSLATION_TABLE
 		self.playlist_dict = global_handlers.PLAYLISTDICT
 		self.download_queue = global_handlers.DOWNLOADQUEUE
 		self.logger = global_handlers.GLOBAL_LOGGER
@@ -20,16 +22,23 @@ class FileCog(commands.Cog):
 		self.poll_list = global_handlers.POLLLIST
 		self.sound_dict = global_handlers.SOUNDDICT
 		self.reaction_dict = global_handlers.REACTIONDICT
+		self.theme_dict = global_handlers.THEMEDICT
 		self.server = bot.get_guild(global_handlers.SERVERID)
 		self.bot = bot
 		self.method_dict = {
 			"populate_playlists": self.read_playlists,
 			"playlists": self.write_out_playlists,
-			"populate_polls": self.read_polls
+			"populate_polls": self.read_polls,
+			"populate_reactions": self.read_reactions,
+			"populate_themes": self.read_themes,
+			"populate_sounds": self.read_sounds,
 		}
 		self.file_queue_processor.start()
+		self.file_queue.put("populate_reactions")
+		self.file_queue.put("populate_sounds")
 		self.file_queue.put("populate_playlists")
 		self.file_queue.put("populate_polls")
+		self.file_queue.put("populate_themes")
 
 	def write_out_playlists(self):
 		with open("££playlists.txt", "w") as file:
@@ -85,39 +94,48 @@ class FileCog(commands.Cog):
 				ident = int(ident)
 				self.poll_list.add(qs, opts, None, tot, ident)
 
-	#
-	#
+	def read_reactions(self):
+		wd = os.getcwd()
+		os.chdir("drive/BotStorage/reactions")
+		for file in glob.glob('*'):
+			category = os.path.splitext(file)[0].translate(self.translation_table)
+			if not self.reaction_dict.exists(category):
+				self.reaction_dict.add_entry(category)
+			self.reaction_dict.add_element(category,f"./drive/BotStorage/reactions/{file}")
+			self.logger.info(file)
+		os.chdir(wd)
 
-	class MyView(nextcord.ui.View):
-		@nextcord.ui.select(  # the decorator that lets you specify the properties of the select menu
-			placeholder="Choose a Flavor!",  # the placeholder text that will be displayed if nothing is selected
-			min_values=1,  # the minimum number of values that must be selected by the users
-			max_values=1,  # the maximum number of values that can be selected by the users
-			options=[  # the list of options from which users can choose, a required field
-				nextcord.SelectOption(
-					label="Vanilla",
-					description="Pick this if you like vanilla!"
-				),
-				nextcord.SelectOption(
-					label="Chocolate",
-					description="Pick this if you like chocolate!"
-				),
-				nextcord.SelectOption(
-					label="Strawberry",
-					description="Pick this if you like strawberry!"
-				)
-			]
-		)
-		async def select_callback(self, select,
-		                          interaction):  # the function called when the user is done selecting options
-			await interaction.response.send_message(f"Awesome! I like {select.values[0]} too!")
+	def read_sounds(self):
+		wd = os.getcwd()
+		os.chdir("drive/BotStorage/sounds")
+		for file in glob.glob('*'):
+			category = os.path.splitext(file)[0].translate(self.translation_table)
+			if not self.sound_dict.exists(category):
+				self.sound_dict.add_entry(category)
+			self.sound_dict.add_element(category,f"./drive/BotStorage/sounds/{file}")
+			self.logger.info(file)
+		os.chdir(wd)
 
-	@commands.command(name="modalDrive")
+	def read_themes(self):
+		wd = os.getcwd()
+		os.chdir("themes")
+		for file in glob.glob('*'):
+			fname = os.path.splitext(file)[0]
+			self.theme_dict[fname[2:-2]] = 50
+			self.logger.info(fname)
+		os.chdir(wd)
+
+	@commands.command(name="addToDrive",
+					help='launch interactive modal to add a new sound or image to bot drive storage',
+					brief='add a new sound or image to bot drive storage')
 	async def add_to_drive_modal(self, ctx):
 		# await ctx.message.delete()
 		self.logger.info(ctx.message.author)
 		if ctx.message.author not in self.server.roles[-1].members:
 			await ctx.send("Command limited to admins")
+			return
+		if len(ctx.message.attachments) == 0:
+			await ctx.send("Please send command with an attachment")
 			return
 		filename = ctx.message.attachments[0].filename
 		name, extension = filename.split('.')
@@ -137,51 +155,57 @@ class FileCog(commands.Cog):
 			call('grive')
 			os.chdir(wd)
 			if file_path != "":
-				await ctx.send(("Sound " if extension == ".mp3" else "Image ") + category + entry_index + " created")
+				await ctx.send(("Sound " if extension == "mp3" else "Image ") + category + entry_index + " created")
 				await ctx.message.delete()
 
-	@commands.command(name="addToDrive")
-	async def add_to_drive(self, ctx, arg):
-		# await ctx.message.delete()
-		self.logger.info(ctx.message.author)
-		if ctx.message.author not in self.server.roles[-1].members:
-			await ctx.send("Command limited to admins")
-			return
-		if arg is None:
-			await ctx.send("Command requires single arg")
-			return
-		filename = ctx.message.attachments[0].filename
-		name, extension = filename.split('.')
-		category = str(arg)
-		self.logger.info(name)
-		self.logger.info(extension)
-		wd = os.getcwd()
-		os.chdir("drive/")
-		file_path, entry_index = await self.process_grive_addition(ctx, category, extension)
-		call('grive')
-		os.chdir(wd)
-		if file_path != "":
-			await ctx.send(("Sound " if extension == ".mp3" else "Image ") + category + entry_index + " created")
+	# @commands.command(name="addToDrive")
+	# async def add_to_drive(self, ctx, arg):
+	# 	# await ctx.message.delete()
+	# 	self.logger.info(ctx.message.author)
+	# 	if ctx.message.author not in self.server.roles[-1].members:
+	# 		await ctx.send("Command limited to admins")
+	# 		return
+	# 	if arg is None:
+	# 		await ctx.send("Command requires single arg")
+	# 		return
+	# 	filename = ctx.message.attachments[0].filename
+	# 	name, extension = filename.split('.')
+	# 	category = str(arg)
+	# 	self.logger.info(name)
+	# 	self.logger.info(extension)
+	# 	wd = os.getcwd()
+	# 	os.chdir("drive/")
+	# 	file_path, entry_index = await self.process_grive_addition(ctx, category, extension)
+	# 	call('grive')
+	# 	os.chdir(wd)
+	# 	if file_path != "":
+	# 		await ctx.send(("Sound " if extension == ".mp3" else "Image ") + category + entry_index + " created")
 
 	async def process_grive_addition(self, ctx, category, extension):
 		def check(m):
 			return m.author == ctx.message.author
-
+		category = category.lower()
 		if extension in ["png", "jpeg", "jpg", "gif", "bmp", "mp3"]:
-			if self.sound_dict.exists(category) and extension == ".mp3":
+			if self.sound_dict.exists(category) and extension == "mp3":
 				# process mp3 request
 				entry_index = str(self.sound_dict.entry_size(category) + 1)
-				file_path = './BotStorage/sounds/££' + category + entry_index + '.' + extension
-				await ctx.message.attachments[0].save(file_path)
-				await ctx.message.delete()
-				self.sound_dict.add_entry(category, file_path)
+				file_path = 'BotStorage/sounds/££' + category + entry_index + '.' + extension
+				await ctx.message.attachments[0].save(f"./{file_path}")
+				try:
+					await ctx.message.delete()
+				except:
+					self.logger.warning("Attempted to delete message from private dm")
+				self.sound_dict.add_element(category, f"./drive/{file_path}")
 			elif self.reaction_dict.exists(category):
 				# Process Image Request
 				entry_index = str(self.reaction_dict.entry_size(category) + 1)
-				file_path = './BotStorage/reactions/££' + category + entry_index + '.' + extension
-				await ctx.message.attachments[0].save(file_path)
-				await ctx.message.delete()
-				self.reaction_dict.add_entry(category, file_path)
+				file_path = 'BotStorage/reactions/££' + category + entry_index + '.' + extension
+				await ctx.message.attachments[0].save(f"./{file_path}")
+				try:
+					await ctx.message.delete()
+				except:
+					self.logger.warning("Attempted to delete message from private dm")
+				self.reaction_dict.add_element(category, f"./drive/{file_path}")
 			else:
 				# New Category
 				mention = ctx.message.author.mention
