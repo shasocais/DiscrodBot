@@ -69,6 +69,10 @@ class CustomLinkedList:
 		return output
 
 
+def get_cleaned_element(element_path):
+	return os.path.splitext(os.path.split(element_path)[-1])[0][2:]
+
+
 class CustomDictonary:
 	def __init__(self):
 		self.__items = {}
@@ -76,17 +80,14 @@ class CustomDictonary:
 	def exists(self, key):
 		return key in self.__items
 
-	def get_cleaned_element(self, element_path):
-		return os.path.splitext(os.path.split(element_path)[-1])[0][2:]
-
 	def element_exists(self, key, element):
 		if self.exists(key):
 			return any(
-				element == item for item in [self.get_cleaned_element(file_path) for file_path in self.__items[key]])
+				element == item for item in [get_cleaned_element(file_path) for file_path in self.__items[key]])
 
 	def get_element(self, key, target_element):
-		return next((element for element in self.__items[key] if self.get_cleaned_element(element) == target_element),
-		            None)
+		return next(
+			(element for element in self.__items[key] if get_cleaned_element(element) == target_element), None)
 
 	def random_select(self, key):
 		return random.choice(self.__items.get(key))
@@ -427,7 +428,9 @@ class DrivePageButton(CustomButton):
 		view.offset = min(view.offset, len(view.options) - 24)
 		await view.remake_select()
 		await interaction.response.edit_message(view=self.view)
-	# await interaction.edit_original_message(view=self.view)
+
+
+# await interaction.edit_original_message(view=self.view)
 
 
 class CategoryPageButton(CustomButton):
@@ -464,6 +467,7 @@ class PollVoteButton(CustomButton):
 class SongDiscoverButton(CustomButton):
 	def __init__(self):
 		super().__init__("Song to find", -1)
+		self.fired_modal = None
 
 	async def callback(self, interaction: nextcord.Interaction):
 		assert self.view is not None
@@ -474,7 +478,7 @@ class SongDiscoverButton(CustomButton):
 		await self.fired_modal.wait()
 		self.label = self.fired_modal.input_field.value
 		await interaction.edit_original_message(view=self.view)
-		view.storeSongToFind(self.fired_modal.input_field.value)
+		view.store_song_to_find(self.fired_modal.input_field.value)
 
 
 class DriveCategoryModal(nextcord.ui.Modal):
@@ -527,18 +531,18 @@ class SongView(nextcord.ui.View):
 	def __init__(self, playlist_list: List[str]) -> None:
 		super().__init__()
 		self.song_to_find = ""
-		self.searchbtn = SongDiscoverButton()
+		self.search_btn = SongDiscoverButton()
 		self.btn = CustomButton(label="Submit", primary=True, provided_callback=self.submit)
-		self.select = nextcord.ui.Select(placeholder="Playlist to add to",
-		                                 options=[nextcord.SelectOption(label=option) for option in playlist_list])
-		self.add_item(self.searchbtn)
+		self.select = nextcord.ui.Select(
+			placeholder="Playlist to add to", options=[nextcord.SelectOption(label=option) for option in playlist_list])
+		self.add_item(self.search_btn)
 		self.add_item(self.select)
 		self.add_item(self.btn)
 
-	def storeSongToFind(self, song_to_find: str):
+	def store_song_to_find(self, song_to_find: str):
 		self.song_to_find = song_to_find
 
-	async def submit(self, Interaction):
+	async def submit(self, _):
 		if self.select.values[0] and self.song_to_find != "":
 			self.stop()
 
@@ -561,6 +565,8 @@ class CategoryEmbed(nextcord.Embed):
 class PollEmbed(nextcord.Embed):
 	def __init__(self, title, poll: Poll):
 		super().__init__(title=title)
+		self.char_map = None
+		self.sizes = None
 		self.poll = poll
 		self.refresh_poll_display()
 		self.setup_fields()
@@ -592,6 +598,8 @@ class CategoryView(nextcord.ui.View):
 class PollView(nextcord.ui.View):
 	def __init__(self, title, poll_list: PollList):
 		super().__init__(timeout=None)
+		self.embed = None
+		self.poll_labels = None
 		self.poll_list = poll_list
 		self.setup_fields()
 
@@ -611,7 +619,9 @@ class PollView(nextcord.ui.View):
 	async def callback(self, interaction: nextcord.Interaction) -> None:
 
 		await interaction.response.edit_message(view=self)
-	# await interaction.edit_original_message(view=self.view)
+
+
+# await interaction.edit_original_message(view=self.view)
 
 
 def my_hook(d):
