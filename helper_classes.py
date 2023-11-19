@@ -22,7 +22,6 @@ class CustomLinkedListNode:
 	def get_container(self):
 		return self.__container
 
-
 	def set_next(self, item):
 		self.__next = item
 
@@ -69,6 +68,7 @@ class CustomLinkedList:
 			output.append(output[-1].get_next())
 		return output
 
+
 class CustomDictonary:
 	def __init__(self):
 		self.__items = {}
@@ -78,16 +78,22 @@ class CustomDictonary:
 
 	def get_cleaned_element(self, element_path):
 		return os.path.splitext(os.path.split(element_path)[-1])[0][2:]
+
 	def element_exists(self, key, element):
 		if self.exists(key):
-			return any(element == item for item in [self.get_cleaned_element(file_path) for file_path in self.__items[key]])
+			return any(
+				element == item for item in [self.get_cleaned_element(file_path) for file_path in self.__items[key]])
 
 	def get_element(self, key, target_element):
-		return next((element for element in self.__items[key] if self.get_cleaned_element(element) == target_element), None)
+		return next((element for element in self.__items[key] if self.get_cleaned_element(element) == target_element),
+		            None)
+
 	def random_select(self, key):
 		return random.choice(self.__items.get(key))
+
 	def keys(self):
 		return list(self.__items.keys())
+
 	def add_entry(self, key):
 		if self.__items.get(key) is None:
 			self.__items[key] = []
@@ -114,8 +120,9 @@ class CustomDictonary:
 	def to_length_dict(self):
 		outp_list = []
 		for key in self.keys():
-			outp_list.append((key,len(self.__items.get(key))))
+			outp_list.append((key, len(self.__items.get(key))))
 		return outp_list
+
 
 class Poll(CustomLinkedListNode):
 	def __init__(self, questions, opts, message, total, ident):
@@ -131,9 +138,11 @@ class Poll(CustomLinkedListNode):
 			self.opts[opt] += 1
 			self.total += 1
 			self.get_container().write_out()
+
 	def add_opt(self, opt):
 		if opt not in self.opts:
 			self.opts[opt] = 0
+
 	def get_option_labels(self):
 		outp_dict = {}
 		for opt in self.get_opts():
@@ -350,10 +359,11 @@ class SongList(CustomLinkedList):
 			self.set_tail(current.get_prev())
 		os.remove(current.get_name + '.mp3')
 
+
 class CategorySelect(nextcord.ui.Select["DriveView"]):
 	def __init__(self, options_list):
 		self.held_options = [nextcord.SelectOption(label=option) for option in options_list]
-		super().__init__(options=self.held_options,placeholder="Choose a Category")
+		super().__init__(options=self.held_options, placeholder="Choose a Category")
 
 	async def callback(self, interaction: nextcord.Interaction):
 		assert self.view is not None
@@ -361,14 +371,15 @@ class CategorySelect(nextcord.ui.Select["DriveView"]):
 		view.wrap_up_selection(self.values[0])
 
 
-
 class DriveInputField(nextcord.ui.TextInput["DriveView"]):
 	def __init__(self):
 		super().__init__(label="Create custom category")
-		
+
+
 class PollInputField(nextcord.ui.TextInput["PollView"]):
 	def __init__(self):
 		super().__init__(label="Enter Answer Option")
+
 
 class CustomButton(nextcord.ui.Button):
 	def __init__(self, label, tag, primary=False, provided_callback=None):
@@ -383,9 +394,13 @@ class CustomButton(nextcord.ui.Button):
 	async def callback(self, interaction: nextcord.Interaction) -> None:
 		if self.provided_callback is not None:
 			await self.provided_callback(interaction, self.tag)
+
+
 class DriveToggleButton(CustomButton):
 	def __init__(self):
 		super().__init__("Create Category?", -1)
+		self.fired_modal = None
+
 	# This function is called whenever this particular button is pressed
 	# This is part of the "meat" of the game logic
 	async def callback(self, interaction: nextcord.Interaction):
@@ -397,8 +412,9 @@ class DriveToggleButton(CustomButton):
 		await self.fired_modal.wait()
 		view.wrap_up_selection(self.fired_modal.input_field.value)
 
+
 class DrivePageButton(CustomButton):
-	def __init__(self, forward = True):
+	def __init__(self, forward=True):
 		super().__init__("-->" if forward else "<--", -1)
 		self.forward = forward
 
@@ -410,12 +426,12 @@ class DrivePageButton(CustomButton):
 		view.offset = max(0, view.offset)
 		view.offset = min(view.offset, len(view.options) - 24)
 		await view.remake_select()
-		await interaction.response.edit_message(view = self.view)
-		#await interaction.edit_original_message(view=self.view)
+		await interaction.response.edit_message(view=self.view)
+	# await interaction.edit_original_message(view=self.view)
 
 
 class CategoryPageButton(CustomButton):
-	def __init__(self, forward = True):
+	def __init__(self, forward=True):
 		super().__init__("-->" if forward else "<--", -1)
 		self.forward = forward
 
@@ -427,7 +443,8 @@ class CategoryPageButton(CustomButton):
 		view.embed.offset = max(0, view.embed.offset)
 		view.embed.offset = min(view.embed.offset, view.embed.max_offset)
 		view.change_paging()
-		await interaction.response.edit_message(embed=view.embed, view = self.view)
+		await interaction.response.edit_message(embed=view.embed, view=self.view)
+
 
 class PollVoteButton(CustomButton):
 	def __init__(self, opt, tag):
@@ -441,7 +458,9 @@ class PollVoteButton(CustomButton):
 		view.embed.clear_fields()
 		view.embed.refresh_poll_display()
 		view.embed.setup_fields()
-		await interaction.response.edit_message(embed=view.embed, view = self.view)
+		await interaction.response.edit_message(embed=view.embed, view=self.view)
+
+
 class SongDiscoverButton(CustomButton):
 	def __init__(self):
 		super().__init__("Song to find", -1)
@@ -453,9 +472,11 @@ class SongDiscoverButton(CustomButton):
 		self.fired_modal = SongModal()
 		await interaction.response.send_modal(self.fired_modal)
 		await self.fired_modal.wait()
-		self.label=self.fired_modal.input_field.value
+		self.label = self.fired_modal.input_field.value
 		await interaction.edit_original_message(view=self.view)
 		view.storeSongToFind(self.fired_modal.input_field.value)
+
+
 class DriveCategoryModal(nextcord.ui.Modal):
 	def __init__(self):
 		super().__init__(title="Set Custom Category")
@@ -467,10 +488,11 @@ class DriveCategoryModal(nextcord.ui.Modal):
 		await interaction.send(response)
 		self.stop()
 
+
 class SongModal(nextcord.ui.Modal):
 	def __init__(self):
 		super().__init__(title="Song to find")
-		self.input_field = nextcord.ui.TextInput(label="Song Search",placeholder="Enter song to find")
+		self.input_field = nextcord.ui.TextInput(label="Song Search", placeholder="Enter song to find")
 		self.add_item(self.input_field)
 
 	async def callback(self, interaction: nextcord.Interaction) -> None:
@@ -478,7 +500,7 @@ class SongModal(nextcord.ui.Modal):
 
 
 class DriveView(nextcord.ui.View):
-	def __init__(self, options_list : List[str]) -> None:
+	def __init__(self, options_list: List[str]) -> None:
 		super().__init__()
 		self.options = options_list
 		self.offset = 0
@@ -487,26 +509,28 @@ class DriveView(nextcord.ui.View):
 		self.add_item(self.button)
 		self.result = ""
 		if self.has_opts:
-			self.selector_template = CategorySelect(self.options[self.offset:min(len(self.options),self.offset+24)])
+			self.selector_template = CategorySelect(self.options[self.offset:min(len(self.options), self.offset + 24)])
 			self.add_item(self.selector_template)
 			self.add_item(DrivePageButton(False))
 			self.add_item(DrivePageButton(True))
 
-	def wrap_up_selection(self, option_to_add : str):
+	def wrap_up_selection(self, option_to_add: str):
 		self.result = option_to_add
 		self.stop()
 
 	async def remake_select(self):
-		options_list = self.options[self.offset:min(len(self.options),self.offset+24)]
+		options_list = self.options[self.offset:min(len(self.options), self.offset + 24)]
 		self.selector_template.options = [nextcord.SelectOption(label=option) for option in options_list]
 
+
 class SongView(nextcord.ui.View):
-	def __init__(self, playlist_list : List[str]) -> None:
+	def __init__(self, playlist_list: List[str]) -> None:
 		super().__init__()
 		self.song_to_find = ""
 		self.searchbtn = SongDiscoverButton()
-		self.btn = CustomButton(label = "Submit", primary=True, provided_callback=self.submit)
-		self.select = nextcord.ui.Select(placeholder="Playlist to add to",options=[nextcord.SelectOption(label=option) for option in playlist_list])
+		self.btn = CustomButton(label="Submit", primary=True, provided_callback=self.submit)
+		self.select = nextcord.ui.Select(placeholder="Playlist to add to",
+		                                 options=[nextcord.SelectOption(label=option) for option in playlist_list])
 		self.add_item(self.searchbtn)
 		self.add_item(self.select)
 		self.add_item(self.btn)
@@ -526,11 +550,13 @@ class CategoryEmbed(nextcord.Embed):
 		self.max_offset = len(categories) - 24
 		self.categories = categories
 		self.setup_fields()
+
 	def setup_fields(self):
-		upper_offset = min(self.offset+24, self.max_offset)
+		upper_offset = min(self.offset + 24, self.max_offset)
 		display_categories = self.categories[self.offset:upper_offset]
 		for category in display_categories:
 			self.add_field(name=category[0], value=f"Element Count: {category[1]}")
+
 
 class PollEmbed(nextcord.Embed):
 	def __init__(self, title, poll: Poll):
@@ -538,18 +564,19 @@ class PollEmbed(nextcord.Embed):
 		self.poll = poll
 		self.refresh_poll_display()
 		self.setup_fields()
+
 	def setup_fields(self):
 		for index, opt in enumerate(self.poll.get_opts()):
 			label = f"{self.char_map[index]}: {opt}"
-			value = f"{int(self.poll.get_opts()[opt] / max(1,self.poll.get_total()) * 100)}%"
+			value = f"{int(self.poll.get_opts()[opt] / max(1, self.poll.get_total()) * 100)}%"
 			self.add_field(name=label, value=value)
-		self.add_field(name="Poll Status", value=make_pie_chart(self.char_map, self.sizes, 8),inline=False)
+		self.add_field(name="Poll Status", value=make_pie_chart(self.char_map, self.sizes, 8), inline=False)
 
 	def refresh_poll_display(self):
 		self.sizes = self.poll.get_option_sizes()
 		self.char_map = "".join([chr(c) for c in range(65313, 65313 + len(self.sizes))])
 
-			
+
 class CategoryView(nextcord.ui.View):
 	def __init__(self, title, categories):
 		super().__init__()
@@ -561,6 +588,7 @@ class CategoryView(nextcord.ui.View):
 		self.embed.clear_fields()
 		self.embed.setup_fields()
 
+
 class PollView(nextcord.ui.View):
 	def __init__(self, title, poll_list: PollList):
 		super().__init__(timeout=None)
@@ -569,8 +597,10 @@ class PollView(nextcord.ui.View):
 
 	def setup_fields(self):
 		for poll in self.poll_list.to_list():
-			self.add_item(CustomButton(label=poll.get_questions(), tag=poll.get_ident(), provided_callback=self.callback))
-	def poll_selected(self, poll:Poll):
+			self.add_item(
+				CustomButton(label=poll.get_questions(), tag=poll.get_ident(), provided_callback=self.callback))
+
+	def poll_selected(self, poll: Poll):
 		self.poll_labels = poll.get_option_labels()
 		count = 65313
 		for opt in self.poll_labels:
@@ -578,11 +608,10 @@ class PollView(nextcord.ui.View):
 			count += 1
 		self.embed = PollEmbed("ECH", poll)
 
-
 	async def callback(self, interaction: nextcord.Interaction) -> None:
 
-		await interaction.response.edit_message(view = self)
-		#await interaction.edit_original_message(view=self.view)
+		await interaction.response.edit_message(view=self)
+	# await interaction.edit_original_message(view=self.view)
 
 
 def my_hook(d):
