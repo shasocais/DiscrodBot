@@ -47,9 +47,9 @@ class SourceCog(commands.Cog):
 		self.base_yt_string = 'https://www.youtube.com/'
 		options = Options()
 		options.headless = True
+		self.display = global_handlers.DISPLAY
 		self.browser = webdriver.Chrome(options=options)
-		self.display = Display(visible=False, size=(800, 600))
-		self.display.start()
+
 
 	ffmpeg_options = {'options': '-vn -sn'}
 
@@ -138,7 +138,7 @@ class SourceCog(commands.Cog):
 		schlorp_ind = random.randint(1, 2)
 		greet = 1#random.randint(1, 3)
 		name = name.replace("'", '')
-		self.create_TTS(name, 'schlorp')
+		create_TTS(name, 'schlorp')
 		name = name.replace(' ','')
 		path = f"./result{name}.mp3"
 		start = f"schlorp/schlorp_{str(schlorp_ind)}.mp3"
@@ -148,11 +148,6 @@ class SourceCog(commands.Cog):
 		os.system(cmd)
 		self.source_queue.put((path, "high"))
 
-	def create_TTS(self, text, dir, lang='en-uk', alt_naming_scheme=False):
-		tts = gTTS(text=text, lang=lang)
-		fname = "speak" if alt_naming_scheme else text.replace(' ', '')
-		tts.save(dir + "/" + fname + ".mp3")
-
 	@commands.command(name='play',
 					help=f"play audio from youtube, args are used to search for the result to play",
 					brief='play audio from youtube')
@@ -160,15 +155,19 @@ class SourceCog(commands.Cog):
 		arg_unioned = '+'.join([str(arg) for arg in args])
 		self.source_queue.put((arg_unioned, 'low'))
 
-	@commands.command(name='speak')
+	@commands.command(name='speak',
+					  help=f'Make the bot speak. Available langs: {global_handlers.GTTS_LANGS}')
 	async def speak(self, ctx, *args):
 		lang = 'en-uk'
 		if args[-1][0] == '<' and args[-1][-1] == '>':
 			lang = args[-1][1:-1]
 			args = args[:-1]
-		arg_unioned = '+'.join([str(arg) for arg in args])
-		self.create_TTS(arg_unioned, './', lang)
-		self.source_queue.put(('./speak.mp3', 'high'))
+		arg_unioned = ' '.join([str(arg) for arg in args])
+		if lang in global_handlers.GTTS_LANGS:
+			create_TTS(arg_unioned, './', lang, alt_naming_scheme=True)
+			self.source_queue.put(('./speak.mp3', 'high'))
+		else:
+			ctx.send(f"Language {lang} not available")
 
 	@commands.command(name='replay',
 					help='play most recently played audio',

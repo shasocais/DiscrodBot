@@ -1,1 +1,1 @@
-([snak < isabel ?? `{'yes': 3, 'no': 5}`8`1]/[which feature comes next? `{'google searchgame': 1, 'properstattracking': 1}`2`0]/)
+([snak < isabel ?? `{'yes': 4, 'no': 6}`10`1]/[Yotsubot too strong`{'Yes': 0, 'No': 0, 'Just Right': 1}`1`2]/[which feature comes next? `{'google searchgame': 1, 'properstattracking': 1}`2`0]/)

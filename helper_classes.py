@@ -1,6 +1,5 @@
 import os
 import random
-
 import nextcord
 from typing import List
 
@@ -143,6 +142,7 @@ class Poll(CustomLinkedListNode):
 	def add_opt(self, opt):
 		if opt not in self.opts:
 			self.opts[opt] = 0
+			self.get_container().write_out()
 
 	def get_option_labels(self):
 		outp_dict = {}
@@ -207,7 +207,7 @@ class PollList(CustomLinkedList):
 
 	def add(self, questions, opts, message, total, ident=-1):
 		if self.get_head() is not None and ident == -1:
-			ident = self.get_head().getIdent() + 1
+			ident = self.get_head().get_ident() + 1
 		elif ident == -1:
 			ident = 0
 		poll = Poll(questions, opts, message, total, ident)
@@ -233,7 +233,6 @@ class PollList(CustomLinkedList):
 				self.set_head(ind.get_prev())
 			if ind is self.get_tail():
 				self.set_tail(ind.get_next())
-			os.remove('polls/££' + str(ident) + 'tastyPie.png')
 
 	def search(self, ident):
 		current = None
@@ -382,15 +381,26 @@ class PollInputField(nextcord.ui.TextInput["PollView"]):
 		super().__init__(label="Enter Answer Option")
 
 
+class CustomTextInput(nextcord.ui.TextInput):
+	def __init__(self, label, provided_callback=None):
+		self.provided_callback = provided_callback
+		super().__init__(style=nextcord.TextInputStyle.short, label=label)
+
+	async def callback(self, interaction: nextcord.Interaction) -> None:
+		if self.provided_callback is not None:
+			await self.provided_callback(interaction, self.value)
+
+
 class CustomButton(nextcord.ui.Button):
-	def __init__(self, label, tag, primary=False, provided_callback=None):
+	def __init__(self, label, tag, primary=False, provided_callback=None, row=None):
 		# A label is required, but we don't need one so a zero-width space is used
 		# The row parameter tells the View which row to place the button under.
 		# A View can only contain up to 5 rows -- each row can only have 5 buttons.
 		# Since a Tic Tac Toe grid is 3x3 that means we have 3 rows and 3 columns.
 		self.provided_callback = provided_callback
 		self.tag = tag
-		super().__init__(style=nextcord.ButtonStyle.primary if primary else nextcord.ButtonStyle.secondary, label=label)
+		super().__init__(
+			style=nextcord.ButtonStyle.primary if primary else nextcord.ButtonStyle.secondary, label=label, row=row)
 
 	async def callback(self, interaction: nextcord.Interaction) -> None:
 		if self.provided_callback is not None:
@@ -450,8 +460,8 @@ class CategoryPageButton(CustomButton):
 
 
 class PollVoteButton(CustomButton):
-	def __init__(self, opt, tag):
-		super().__init__(f"{tag} : {opt}", -1)
+	def __init__(self, opt, tag, row=None):
+		super().__init__(f"{tag} : {opt}", -1, row=row)
 		self.opt = opt
 
 	async def callback(self, interaction: nextcord.Interaction) -> None:
@@ -490,6 +500,17 @@ class DriveCategoryModal(nextcord.ui.Modal):
 	async def callback(self, interaction: nextcord.Interaction) -> None:
 		response = f"Creating new category {self.input_field.value}"
 		await interaction.send(response)
+		self.stop()
+
+
+class PollModal(nextcord.ui.Modal):
+	def __init__(self, tag):
+		super().__init__(title="Create Poll" if tag == -1 else "Add Poll option")
+		self.tag = tag
+		self.input_field = nextcord.ui.TextInput(label="Poll Qs" if tag == -1 else "Poll Opt")
+		self.add_item(self.input_field)
+
+	async def callback(self, interaction: nextcord.Interaction) -> None:
 		self.stop()
 
 
@@ -564,6 +585,8 @@ class CategoryEmbed(nextcord.Embed):
 
 class PollEmbed(nextcord.Embed):
 	def __init__(self, title, poll: Poll):
+		if title[-1] != "?":
+			title += "?"
 		super().__init__(title=title)
 		self.char_map = None
 		self.sizes = None
@@ -595,33 +618,77 @@ class CategoryView(nextcord.ui.View):
 		self.embed.setup_fields()
 
 
+class YAView(nextcord.ui.View):
+	def __init__(self, source_queue):
+		super().__init__(timeout=60)
+		self.source_queue = source_queue
+		self.add_btn = CustomButton(label="Speak", provided_callback=self.callback, tag=-1)
+		self.add_item(
+			self.add_btn
+		)
+
+	async def callback(self, interaction: nextcord.Interaction, _):
+		self.source_queue.put(('./YAout.mp3', 'high'))
+
+	async def on_timeout(self):
+		self.clear_items()
+
+
 class PollView(nextcord.ui.View):
-	def __init__(self, title, poll_list: PollList):
+	def __init__(self, poll_list: PollList):
 		super().__init__(timeout=None)
+		self.fired_modal = None
 		self.embed = None
 		self.poll_labels = None
 		self.poll_list = poll_list
 		self.setup_fields()
 
 	def setup_fields(self):
+		self.add_item(
+			CustomButton(label="Create new poll", tag=-1, primary=True, provided_callback=self.create_callback)
+		)
 		for poll in self.poll_list.to_list():
 			self.add_item(
-				CustomButton(label=poll.get_questions(), tag=poll.get_ident(), provided_callback=self.callback))
+				CustomButton(label=poll.get_questions(), tag=poll.get_ident(), provided_callback=self.callback, row=1))
 
 	def poll_selected(self, poll: Poll):
 		self.poll_labels = poll.get_option_labels()
 		count = 65313
+		self.clear_items()
+		self.add_item(
+			CustomButton(
+				label="Add new option", primary=True, tag=poll.get_ident(), provided_callback=self.add_opt_callback))
 		for opt in self.poll_labels:
-			self.add_item(PollVoteButton(opt, chr(count)))
+			self.add_item(PollVoteButton(opt, chr(count), row=1))
 			count += 1
-		self.embed = PollEmbed("ECH", poll)
+		if self.embed is not None:
+			self.embed.clear_fields()
+		self.embed = PollEmbed(poll.get_questions(), poll)
 
-	async def callback(self, interaction: nextcord.Interaction) -> None:
+	async def add_opt_callback(self, interaction: nextcord.Interaction, tag) -> None:
+		self.fired_modal = PollModal(tag)
+		await interaction.response.send_modal(self.fired_modal)
+		await self.fired_modal.wait()
+		f, poll = self.poll_list.search(tag)
+		if f:
+			poll.add_opt(self.fired_modal.input_field.value)
+			self.poll_selected(poll)
+			await interaction.edit_original_message(embed=self.embed, view=self)
 
-		await interaction.response.edit_message(view=self)
+	async def create_callback(self, interaction: nextcord.Interaction, _) -> None:
+		# Fire Custom Category modal
+		self.fired_modal = PollModal(-1)
+		await interaction.response.send_modal(self.fired_modal)
+		await self.fired_modal.wait()
+		new_poll = self.poll_list.add(self.fired_modal.input_field.value, {}, None, 0)
+		self.poll_selected(new_poll)
+		await interaction.edit_original_message(embed=self.embed, view=self)
 
-
-# await interaction.edit_original_message(view=self.view)
+	async def callback(self, interaction: nextcord.Interaction, tag) -> None:
+		f, poll = self.poll_list.search(tag)
+		if f:
+			self.poll_selected(poll)
+		await interaction.response.edit_message(embed=self.embed, view=self)
 
 
 def my_hook(d):

@@ -95,7 +95,7 @@ class PlayerCog(commands.Cog):
             self.voice.stop()
 
     @commands.command(name='pause',
-					help=f"pause currently playing sound source, if left paused for > {DC_TIMEOUT} minutes",
+					help=f"pause currently playing sound source, if left paused for > {DC_TIMEOUT} minutes clears voice",
 					brief='pause currently playing sound source')
     async def pause(self, ctx):
         if self.voice:
