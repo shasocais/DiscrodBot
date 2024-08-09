@@ -1,16 +1,22 @@
+from logging import Logger
 import os
 import random
 import nextcord
-from typing import List
+from typing import List, Type, TypeVar
 
 from general_functions import make_pie_chart
+T = TypeVar('T', bound='CustomLinkedListNode')
+V = TypeVar('V', bound='CustomLinkedList')
 
-
-class CustomLinkedListNode:
-	def __init__(self):
+class CustomLinkedListNode():
+	__next: Type[T]
+	__prev: Type[T]
+	__container: Type[V]
+	def __init__(self, id=-1):
 		self.__next = None
 		self.__prev = None
 		self.__container = None
+		self.id = id
 
 	def get_next(self):
 		return self.__next
@@ -31,10 +37,13 @@ class CustomLinkedListNode:
 		self.__container = container
 
 
-class CustomLinkedList:
-	def __init__(self):
+class CustomLinkedList():
+	__head : Type[T]
+	__tail : Type[T]
+	def __init__(self, id=-1):
 		self.__head = None
 		self.__tail = None
+		self.id = id
 
 	def is_empty(self):
 		return self.__head is None
@@ -61,11 +70,14 @@ class CustomLinkedList:
 				break
 		return count
 
-	def to_list(self):
-		output = [self.get_head()]
-		while len(output) < self.size():
-			output.append(output[-1].get_next())
-		return output
+	def to_list(self:V) -> list[T]:
+		if self.get_head() is not None:
+			output = [self.get_head()]
+			while len(output) < self.size():
+				output.append(output[-1].get_next())
+			return output
+		else:
+			return []
 
 
 def get_cleaned_element(element_path):
@@ -274,8 +286,8 @@ class PollList(CustomLinkedList):
 
 
 class SongNode(CustomLinkedListNode):
-	def __init__(self, init_name, init_url):
-		super().__init__()
+	def __init__(self,init_id, init_name, init_url):
+		super().__init__(init_id)
 		self.name = init_name
 		self.url = init_url
 
@@ -294,12 +306,14 @@ class SongNode(CustomLinkedListNode):
 
 class SongList(CustomLinkedList):
 
-	def __init__(self):
-		super().__init__()
+	def __init__(self, name="", desc="", id = -1):
+		super().__init__(id)
 		self.__recent = None
+		self.name = name
+		self.desc = desc
 
-	def add(self, item_name, item_url):
-		temp = SongNode(item_name, item_url)
+	def add(self,item_id, item_name, item_url):
+		temp = SongNode(item_id, item_name, item_url)
 		if self.get_head() is None:
 			self.set_head(temp)
 			self.set_tail(temp)
@@ -316,7 +330,7 @@ class SongList(CustomLinkedList):
 
 	def get_recent(self):
 		if self.__recent:
-			return self.__recent.get_name(), self.__recent.get_url()
+			return self.__recent
 
 	def set_recent(self, item):
 		self.__recent = item
@@ -694,3 +708,17 @@ class PollView(nextcord.ui.View):
 def my_hook(d):
 	if d['status'] == 'finished':
 		print("Done Downloading, now converting")
+
+class LoggerWrapper():
+	def __init__(self, logger:Logger, scope:str) -> None:
+		self._scope = scope
+		self._logger = logger
+
+	def info(self, msg:str):
+		self._logger.info(f"{self._scope} : {msg}")
+
+	def warning(self, msg:str):
+		self._logger.warning(f"{self._scope} : {msg}")
+
+	def error(self, msg:str):
+		self._logger.error(f"{self._scope} : {msg}")

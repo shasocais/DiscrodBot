@@ -16,6 +16,8 @@ import global_handlers
 from general_functions import *
 import os
 
+from helper_classes import LoggerWrapper
+
 
 class PlayerCog(commands.Cog):
     DC_TIMEOUT = 5
@@ -30,7 +32,7 @@ class PlayerCog(commands.Cog):
         self.voice = None
         self.low_prio_queue = deque()
         self.high_prio_queue = deque()
-        self.logger = global_handlers.GLOBAL_LOGGER
+        self.logger = LoggerWrapper(global_handlers.GLOBAL_LOGGER, "Player-Cog")
         self.should_dc = False
         self.volume = 1
         self.pause_timestamp = datetime.datetime.now()
@@ -83,7 +85,7 @@ class PlayerCog(commands.Cog):
             while self.voice.is_playing() or self.voice.is_paused():
                 await asyncio.sleep(1)
         except Exception as e:
-            self.logger.warn(f"Playing file failed {e}")
+            self.logger.warning(f"Playing file failed {e}")
         if self.should_dc:
             await self.voice.disconnect()
 

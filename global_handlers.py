@@ -8,13 +8,13 @@ from html.parser import HTMLParser
 import logging
 
 GTTS_LANGS = gtts.lang.tts_langs()
-DISPLAY = Display(visible=False, size=(800, 800))
+DISPLAY = Display(visible=False, size=(1920, 1080))
 DISPLAY.start()
 logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
 logging.basicConfig(level=logging.WARNING)
 GLOBAL_LOGGER = logging.getLogger("global_logger")
-GLOBAL_LOGGER.setLevel(0)
+GLOBAL_LOGGER.setLevel(30)
 ANNOUNCEQUEUE = queue.Queue()
 PLAYERQUEUE = queue.Queue()
 DOWNLOADQUEUE = queue.Queue()

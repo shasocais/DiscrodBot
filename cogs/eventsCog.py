@@ -29,7 +29,9 @@ class EventsCog(commands.Cog):
 		self.source_queue = global_handlers.SOURCEQUEUE
 		self.download_queue = global_handlers.DOWNLOADQUEUE
 		self.theme_dict = global_handlers.THEMEDICT
-		self.logger = global_handlers.GLOBAL_LOGGER
+		self.logger = helper_classes.LoggerWrapper(global_handlers.GLOBAL_LOGGER,"Event-Cog")
+
+		
 	@commands.Cog.listener(name="on_voice_state_update")
 	async def handle_member_movement(self, member, before, after):
 		if member.top_role.name == 'Bot Boy':
@@ -51,6 +53,6 @@ class EventsCog(commands.Cog):
 					else:
 						self.download_queue.put((member.id, member.display_name, "theme"))
 			else:
-				self.logger.warn("Unrecognised voice update")
+				self.logger.warning("Unrecognised voice update")
 def setup(bot):
 	bot.add_cog(EventsCog(bot))

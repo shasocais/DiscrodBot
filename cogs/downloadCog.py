@@ -3,8 +3,8 @@ import random
 from nextcord.ext import commands
 from nextcord.ext import tasks
 import yt_dlp
-from yt_dlp.utils import DownloadError
-from helper_classes import my_hook
+from yt_dlp.utils import YoutubeDLError
+from helper_classes import LoggerWrapper, my_hook
 import asyncio
 from svgelements import *
 from io import StringIO
@@ -18,18 +18,18 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from pyvirtualdisplay import Display
 
 
 class DownloadCog(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
-		self.downloadQueue = global_handlers.DOWNLOADQUEUE
+		self.download_queue = global_handlers.DOWNLOADQUEUE
+		self.file_queue = global_handlers.FILEQUEUE
 		self.playlist_dict = global_handlers.PLAYLISTDICT
-		self.sourceQueue = global_handlers.SOURCEQUEUE
+		self.source_queue = global_handlers.SOURCEQUEUE
 		self.recentSongList = global_handlers.RECENTSONGLIST
 		self.theme_dict = global_handlers.THEMEDICT
-		self.logger = global_handlers.GLOBAL_LOGGER
+		self.logger = LoggerWrapper(global_handlers.GLOBAL_LOGGER, "DL-Cog")
 		self.exit = None
 		self.download_queue_processor.start()
 		options = Options()
@@ -146,9 +146,9 @@ class DownloadCog(commands.Cog):
 		with yt_dlp.YoutubeDL(ydl_opts) as ydl:
 			try:
 				ydl.download([songUrl])
-			except DownloadError:
-				self.logger.info("Caught Download Error: ", DownloadError.msg)
-				return DownloadError.msg
+			except YoutubeDLError as e:
+				self.logger.info(f"Caught Download Error: {e.msg}")
+				return e.msg
 		return ""
 
 	async def process_svg_into_abc_file(self, svg, major, title):
@@ -292,11 +292,12 @@ class DownloadCog(commands.Cog):
 		os.system(cmd)
 		os.chdir(wd)
 		self.theme_dict[str(id)] = 50
+		self.file_queue.put(("write_theme", [str(id), name]))
 
 	@tasks.loop(seconds=1)
 	async def download_queue_processor(self):
-		if not self.downloadQueue.empty():
-			source, title, save_to_recent = self.downloadQueue.get()
+		if not self.download_queue.empty():
+			source, title, save_to_recent = self.download_queue.get()
 			print(source, title, save_to_recent)
 			if str(save_to_recent) == "theme":
 				await self.scrape_musical_name(title, source)
@@ -308,14 +309,14 @@ class DownloadCog(commands.Cog):
 				result = await self.download_song(directory, song_title, source)
 				if result != "":
 					# Download failed look for alternative
-					self.sourceQueue.put((song_title, directory))
+					self.source_queue.put((song_title, directory))
 					return
 				# successfuly downloaded, ensure playlist href matches
 				if self.playlist_dict.get(directory) and self.playlist_dict[directory].contains(song_title):
 					song_node = self.playlist_dict[directory].retrieve(song_title)
 					if song_node.get_url() != source:
 						song_node.set_url(source)
-				if self.downloadQueue.empty():
+				if self.download_queue.empty():
 					global_handlers.FILEQUEUE.put("playlists")
 
 

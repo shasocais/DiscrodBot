@@ -10,8 +10,6 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from pyvirtualdisplay import Display
-import logging
 import asyncio
 import queue
 
@@ -42,7 +40,7 @@ class SourceCog(commands.Cog):
 		self.source_queue = global_handlers.SOURCEQUEUE
 		self.recentSongList = global_handlers.RECENTSONGLIST
 		self.exit = None
-		self.logger = global_handlers.GLOBAL_LOGGER
+		self.logger = helper_classes.LoggerWrapper(global_handlers.GLOBAL_LOGGER, "Source-Cog")
 		self.source_queue_processor.start()
 		self.base_yt_string = 'https://www.youtube.com/'
 		options = Options()
@@ -74,6 +72,17 @@ class SourceCog(commands.Cog):
 				self.browser.get(yt_search_string)
 				self.logger.info("Browser got")
 				await asyncio.sleep(2.5)
+				try:
+					# Check for cookies
+					consent_button_xpath = "//button[@aria-label='Accept the use of cookies and other data for the purposes described']"
+					consent = WebDriverWait(self.browser, 5).until(EC.element_to_be_clickable(
+						(By.XPATH, consent_button_xpath)))
+
+					consent = self.browser.find_element_by_xpath(consent_button_xpath)
+					consent.click()
+				except:
+					self.logger.info("Cookies not clickered")
+					# Cookie Failure
 				link_list = WebDriverWait(self.browser, 3).until(
 					EC.presence_of_all_elements_located((By.CLASS_NAME, 'ytd-video-primary-info-renderer')))
 				count = 0
@@ -89,6 +98,15 @@ class SourceCog(commands.Cog):
 			self.logger.info("Browser navigating to site")
 			self.browser.get(yt_search_string)
 			self.logger.info("Browser got")
+			try:
+				# Check for cookies
+				consent_button_xpath = "//button[@aria-label='Accept the use of cookies and other data for the purposes described']"
+				consent = WebDriverWait(self.browser, 5).until(EC.element_to_be_clickable(
+					(By.XPATH, consent_button_xpath)))
+				consent.click()
+			except:
+				self.logger.info("Cookies not clickered")
+				# Cookie Failure
 			link_list = WebDriverWait(self.browser, 3).until(
 				EC.presence_of_all_elements_located((By.ID, 'video-title')))
 			if title:
@@ -110,8 +128,9 @@ class SourceCog(commands.Cog):
 			if location == "online":
 				# Get song from YT
 				link_list = await self.yt_lookup(source, True)
-				song_title = link_list[0].get("title")
-				song_href = link_list[0].get("link")
+				correct_entry = next(filter(lambda item: item.get("title") != None and item.get("link") != None, link_list))
+				song_title = correct_entry.get("title")
+				song_href = correct_entry.get("link")
 				if not self.recentSongList.contains(song_title):  # If new song
 					if self.recentSongList.size == 10:
 						os.remove(song_title + '.mp3')
@@ -175,7 +194,7 @@ class SourceCog(commands.Cog):
 	async def replay(self, ctx):
 		recent_song = self.recentSongList.get_recent()
 		if recent_song:
-			self.source_queue.put((recent_song, "low"))
+			self.source_queue.put((f"/recent/{recent_song.get_name()}", "low"))
 
 	@commands.command(name='playPlaylist',
 					help='playPlaylist takes one arg playlist name, wipes the song queue, use ClearQueue to stop',

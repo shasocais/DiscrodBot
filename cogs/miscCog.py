@@ -7,7 +7,7 @@ from nextcord.ext import commands
 
 import global_handlers
 from general_functions import char_offsets, generate_meme_square, create_TTS
-from helper_classes import PollView, YAView
+from helper_classes import LoggerWrapper, PollView, YAView
 
 import os
 from selenium import webdriver
@@ -22,7 +22,7 @@ class MiscCog(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.exit = None
-		self.logger = global_handlers.GLOBAL_LOGGER
+		self.logger = LoggerWrapper(global_handlers.GLOBAL_LOGGER, "Misc-Cog")
 		self.poll_dict = global_handlers.POLLLIST
 		options = Options()
 		prefs = {'download.default_directory': os.path.abspath("./themes/")}
